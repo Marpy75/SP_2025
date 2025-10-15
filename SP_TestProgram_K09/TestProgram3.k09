@@ -1,0 +1,24 @@
+Program kkkc;
+Var Integer aaaa, bbbb, cyca, cycb, xval;
+Start
+    Input(aaaa)
+    Input(bbbb)
+
+    cyca -> aaaa
+    while cyca Le bbbb {
+        Output(cyca Mul cyca)
+        (cyca + 1) -> cyca
+    }
+
+    0 -> xval
+    1 -> cyca
+    while cyca Le aaaa {
+        1 -> cycb
+        while cycb Le bbbb {
+            (xval + 1) -> xval
+            (cycb + 1) -> cycb
+        }
+        (cyca + 1) -> cyca
+    }
+    Output(xval)
+Finish

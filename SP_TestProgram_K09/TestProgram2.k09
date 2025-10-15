@@ -1,0 +1,34 @@
+Program kkkb;
+Var Integer aaaa, bbbb, cccc, maxm;
+Start
+    Input(aaaa)
+    Input(bbbb)
+    Input(cccc)
+
+    if aaaa Ge bbbb && aaaa Ge cccc {
+        aaaa -> maxm
+    } else if bbbb Ge aaaa && bbbb Ge cccc {
+        bbbb -> maxm
+    } else {
+        cccc -> maxm
+    }
+    Output(maxm)
+
+    if (aaaa == bbbb) && (aaaa == cccc) && (bbbb == cccc) {
+        Output(1)
+    } else {
+        Output(0)
+    }
+
+    if ! (aaaa Ge 0) || ! (bbbb Ge 0) || ! (cccc Ge 0) {
+        Output(-1)
+    } else {
+        Output(0)
+    }
+
+    if aaaa Ge (bbbb + cccc) {
+        Output(10)
+    } else {
+        Output(0)
+    }
+Finish

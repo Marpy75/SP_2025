@@ -1,0 +1,18 @@
+Program kkka;
+Var Integer aaaa, bbbb, xxxx, yyyy;
+Start
+    Input(aaaa)
+    Input(bbbb)
+
+    Output(aaaa + bbbb)
+    Output(aaaa - bbbb)
+    Output(aaaa Mul bbbb)
+    Output(aaaa Div bbbb)
+    Output(aaaa Mod bbbb)
+
+    (aaaa - bbbb) Mul 10 + (aaaa + bbbb) Div 10 -> xxxx
+    xxxx + xxxx Mod 10 -> yyyy
+
+    Output(xxxx)
+    Output(yyyy)
+Finish
