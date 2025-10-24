@@ -1,15 +1,33 @@
 #define _CRT_SECURE_NO_WARNINGS
 /************************************************************
-* N.Kozak // Lviv'2024-2025 // lexica__2025                 *
-*                         file: lexica_one.cpp              *
+* N.Kozak // Lviv'2024-2025 // lexica_part_dfa__2025        *
+*                         file: lexicapart_dfa_one.cpp      *
 *                                                  (draft!) *
 *************************************************************/
+#define MAX_DFA_SCAN_LEXEM_SIZE_FOR_TOKEN_PARSING 16
+#define USE_DFA_FOR_TOKEN_PARSING
+#define USE_DFA_TO_ACCEPT_KEYWORD
+#define USE_DFA_TO_ACCEPT_IDENTIFIER
+#define USE_DFA_TO_ACCEPT_UNSIGNEDVALUE
+
 #define TOKENS_RE         "->|==|!=|!!|&&|\\|\\||\\+|-|Mul|Div|Mod|Le|Ge|\\(|\\)|\\{|\\}|\\[|\\]|,|;|[_0-9A-Za-z]+|[^ \t\r\f\v\n]"
 #define KEYWORDS_RE       "->|==|!=|!!|&&|\\|\\||\\+|-|Mul|Div|Mod|Le|Ge|\\(|\\)|\\{|\\}|\\[|\\]|,|;|Program|Var|Start|Finish|Input|Output|If|Else|While|Continue|Break|Integer"
 #define IDENTIFIERS_RE    "[a-z][a-z][a-z][a-z]"
 #define UNSIGNEDVALUES_RE "0|[1-9][0-9]*"
 
+
+
+#include "../built_src/dfa.hpp"
+#include "../built_src/matcher_by_dfa.hpp"
+#include "../built_src/file1.hpp"
+#include "../built_src/file2.hpp"
+#include "../built_src/file3.hpp"
+#include "../built_src/file4.hpp"
+
+//#define DEFAULT_INPUT_FILE "../base_test_programs_2025/file3.k03"
 #define DEFAULT_INPUT_FILE "../base_test_programs_2025/file2.k03"
+//#define DEFAULT_INPUT_FILE "../base_test_programs_2025/file1.k03"
+//#define DEFAULT_INPUT_FILE "../other_test_programs_2025/file4.k03"
 
 #define SUCCESS_STATE 0
 
@@ -102,7 +120,7 @@ struct LexemInfo tokenize(char* text, struct LexemInfo** lastLexemInfoInTable, c
 
 #define MAX_ACCESSORY_STACK_SIZE_123 128
 
-char tempStrFor_123[MAX_TEXT_SIZE/*?TODO:... MAX_ACCESSORY_STACK_SIZE_123 * 64*/] = {'\0'};
+char tempStrFor_123[MAX_TEXT_SIZE/*?TODO:... MAX_ACCESSORY_STACK_SIZE_123 * 64*/] = { '\0' };
 unsigned long long int tempStrForCurrIndex = 0;
 
 struct LexemInfo lexemesInfoTable[MAX_WORD_COUNT];// = { { "", 0, 0, 0 } };
@@ -118,7 +136,7 @@ LexemInfo::LexemInfo() {
 	row = ~0;
 	col = ~0;
 }
-LexemInfo::LexemInfo(const char * lexemStr, unsigned long long int lexemId, unsigned long long int tokenType, unsigned long long int ifvalue, unsigned long long int row, unsigned long long int col) {
+LexemInfo::LexemInfo(const char* lexemStr, unsigned long long int lexemId, unsigned long long int tokenType, unsigned long long int ifvalue, unsigned long long int row, unsigned long long int col) {
 	strncpy(this->lexemStr, lexemStr, MAX_LEXEM_SIZE);
 	this->lexemId = lexemId;
 	this->tokenType = tokenType;
@@ -126,7 +144,7 @@ LexemInfo::LexemInfo(const char * lexemStr, unsigned long long int lexemId, unsi
 	this->row = row;
 	this->col = col;
 }
-LexemInfo::LexemInfo(const NonContainedLexemInfo& nonContainedLexemInfo){
+LexemInfo::LexemInfo(const NonContainedLexemInfo& nonContainedLexemInfo) {
 	strncpy(lexemStr, nonContainedLexemInfo.lexemStr, MAX_LEXEM_SIZE);
 	lexemId = nonContainedLexemInfo.lexemId;
 	tokenType = nonContainedLexemInfo.tokenType;
@@ -224,11 +242,19 @@ unsigned int tryToGetIdentifier(struct LexemInfo* lexemInfoInTable, char(*identi
 	char * identifiers_re = (char*) IDENTIFIERS_RE;
 	//char identifiers_re[] = "_[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]";
 
+#ifdef USE_DFA_TO_ACCEPT_IDENTIFIER
+	if (tryToAccept(&transitionTable3, transitionTable3FinitStates, lexemInfoInTable->lexemStr)) {
+		lexemInfoInTable->lexemId = getIdentifierId(identifierIdsTable, lexemInfoInTable->lexemStr);
+		lexemInfoInTable->tokenType = IDENTIFIER_LEXEME_TYPE;
+		return SUCCESS_STATE;
+	}
+#else
 	if (std::regex_match(std::string(lexemInfoInTable->lexemStr), std::regex(identifiers_re))) {
 		lexemInfoInTable->lexemId = getIdentifierId(identifierIdsTable, lexemInfoInTable->lexemStr);
 		lexemInfoInTable->tokenType = IDENTIFIER_LEXEME_TYPE;
 		return SUCCESS_STATE;
 	}
+#endif
 
 	return ~SUCCESS_STATE;
 }
@@ -238,13 +264,21 @@ unsigned int tryToGetUnsignedValue(struct LexemInfo* lexemInfoInTable) {
 	char * unsignedvalues_re = (char*) UNSIGNEDVALUES_RE;
 	//char unsignedvalues_re[] = "0|[1-9][0-9]*";
 
+#ifdef USE_DFA_TO_ACCEPT_UNSIGNEDVALUE
+	if (tryToAccept(&transitionTable4, transitionTable4FinitStates, lexemInfoInTable->lexemStr)) {
+		lexemInfoInTable->ifvalue = atoi(lastLexemInfoInTable->lexemStr);
+		lexemInfoInTable->lexemId = MAX_VARIABLES_COUNT + MAX_KEYWORD_COUNT;
+		lexemInfoInTable->tokenType = VALUE_LEXEME_TYPE;
+		return SUCCESS_STATE;
+	}
+#else
 	if (std::regex_match(std::string(lexemInfoInTable->lexemStr), std::regex(unsignedvalues_re))) {
 		lexemInfoInTable->ifvalue = atoi(lastLexemInfoInTable->lexemStr);
 		lexemInfoInTable->lexemId = MAX_VARIABLES_COUNT + MAX_KEYWORD_COUNT;
 		lexemInfoInTable->tokenType = VALUE_LEXEME_TYPE;
 		return SUCCESS_STATE;
 	}
-
+#endif
 	return ~SUCCESS_STATE;
 }
 
@@ -329,12 +363,19 @@ char tryToGetKeyWord(struct LexemInfo* lexemInfoInTable) {
 	char keywords_[sizeof(KEYWORDS_RE)] = { '\0' };
 	prepareKeyWordIdGetter(keywords_, keywords_re);
 
+#ifdef USE_DFA_TO_ACCEPT_KEYWORD
+	if (tryToAccept(&transitionTable2, transitionTable2FinitStates, lexemInfoInTable->lexemStr)) {
+		lexemInfoInTable->lexemId = getKeyWordId(keywords_, lexemInfoInTable->lexemStr, MAX_VARIABLES_COUNT);
+		lexemInfoInTable->tokenType = KEYWORD_LEXEME_TYPE;
+		return SUCCESS_STATE;
+	}
+#else
 	if (std::regex_match(std::string(lexemInfoInTable->lexemStr), std::regex(keywords_re))) {
 		lexemInfoInTable->lexemId = getKeyWordId(keywords_, lexemInfoInTable->lexemStr, MAX_VARIABLES_COUNT);
 		lexemInfoInTable->tokenType = KEYWORD_LEXEME_TYPE;
 		return SUCCESS_STATE;
 	}
-
+#endif
 	return ~SUCCESS_STATE;
 }
 
@@ -381,10 +422,25 @@ struct LexemInfo tokenize(char* text, struct LexemInfo** lastLexemInfoInTable, c
 	char * tokens_re = (char*) TOKENS_RE;
 	//char tokens_re[] = ";|<<|>>|\\+|-|\\*|,|==|!=|:|\\(|\\)|<=|>=|[_0-9A-Za-z]+|[^ \t\r\f\v\n]";
 	//char tokens_re[] = "<<|\\+\\+|--|\\*\\*|==|\\(|\\)|!=|[_0-9A-Za-z]+|[^ \t\r\f\v\n]";
+#ifndef USE_DFA_FOR_TOKEN_PARSING
 	std::regex tokens_re_(tokens_re);
+#endif
 	struct LexemInfo ifBadLexemeInfo; // = { 0 };
+#ifndef USE_DFA_FOR_TOKEN_PARSING
 	std::string stringText(text);
+#endif
 
+#ifdef USE_DFA_FOR_TOKEN_PARSING
+	for (char* text_ = text, *text__ = text; *text_ != '\0'; ++ * lastLexemInfoInTable, text__ = ++text_){
+		for (; *text_ != '\0' && !getFirstEntry(&transitionTable1, MAX_DFA_SCAN_LEXEM_SIZE_FOR_TOKEN_PARSING, transitionTable1FinitStates, &text_); ++text__, text_ = text__);
+		if (*text_ == '\0') break;
+		strncpy((*lastLexemInfoInTable)->lexemStr, text__, text_ - text__ + 1);
+		(*lastLexemInfoInTable)->lexemStr[text_ - text__ + 1] = '\0';
+		if ((ifBadLexemeInfo = (*lexicalAnalyzeFunctionPtr)(*lastLexemInfoInTable, identifierIdsTable)).tokenType == UNEXPEXTED_LEXEME_TYPE) {
+			break;
+		}
+	}
+#else
 	for (std::sregex_token_iterator end, tokenIterator(stringText.begin(), stringText.end(), tokens_re_); tokenIterator != end; ++tokenIterator, ++ * lastLexemInfoInTable) {
 		std::string str = *tokenIterator;
 		strncpy((*lastLexemInfoInTable)->lexemStr, str.c_str(), MAX_LEXEM_SIZE);
@@ -392,6 +448,7 @@ struct LexemInfo tokenize(char* text, struct LexemInfo** lastLexemInfoInTable, c
 			break;
 		}
 	}
+#endif
 
 	setPositions(text, lexemesInfoTable);
 
@@ -455,7 +512,6 @@ size_t loadSource(char** text, char* fileName) {
 	return fileSize;
 }
 
-#define RUN_SOME_SEMANTIX_CHECK
 int main(int argc, char* argv[]) {
 	char* text;
 	char fileName[128] = DEFAULT_INPUT_FILE;
@@ -510,12 +566,6 @@ int main(int argc, char* argv[]) {
 		printLexemes(lexemesInfoTable, 0);
 	}
 
-#ifdef RUN_SOME_SEMANTIX_CHECK
-	bool semantics�heck1(struct LexemInfo* lexemInfoTable);
-	bool semantics�heck2(struct LexemInfo* lexemInfoTable);
-	bool semantics�heckResult = semantics�heck1(lexemesInfoTable) && semantics�heck2(lexemesInfoTable);
-#endif
-
 	free(text);
 
 	(void)getchar();
@@ -528,27 +578,4 @@ int main(int argc, char* argv[]) {
 #endif
 
 	return 0;
-}
-
-bool semantics�heck1(struct LexemInfo* lexemInfoTable) {
-	for (unsigned long long int index = 0; lexemInfoTable[index].lexemStr[0] != '\0'; ++index) {
-		if (lexemInfoTable[index].tokenType == VALUE_LEXEME_TYPE) {
-			if (lexemInfoTable[index - 1].lexemStr[0] == '-') {
-				if (lexemInfoTable[index].ifvalue > 32768) {
-					printf("Bad lexem value (column: %lld, row: %lld): %s.\n", lexemInfoTable[index].row, lexemInfoTable[index].col, lexemInfoTable[index].lexemStr);
-					return true;
-				}
-			}
-			else if (lexemInfoTable[index].ifvalue > 32767) {
-				printf("Bad lexem value (column: %lld, row: %lld): %s.\n", lexemInfoTable[index].row, lexemInfoTable[index].col, lexemInfoTable[index].lexemStr);
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-bool semantics�heck2(struct LexemInfo* lexemInfoTable) {
-	// TODO:...
-	return true;
 }
